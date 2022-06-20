@@ -1,0 +1,16 @@
+{
+  "name": "user-consent",
+  "version": "0.0.1",
+  "description": "User Consent Application",
+  "scripts": {
+    "format": "npm --prefix user-service run format && npm --prefix token-service run format && npm --prefix gateway run format && npm --prefix event-service run format",
+    "lint": "npm --prefix user-service run lint && npm --prefix token-service run lint && npm --prefix gateway run lint && npm --prefix event-service run lint",
+    "prepare": "husky install",
+    "before:commit": "npm run format && npm run lint"
+  },
+  "author": "igor.kaudenko@gmail.com",
+  "license": "ISC",
+  "devDependencies": {
+    "husky": "^8.0.1"
+  }
+}

@@ -1,0 +1,96 @@
+version: '3'
+services:
+  gateway:
+    build: ./gateway
+    restart: unless-stopped
+    hostname: gateway
+    container_name: gateway
+    env_file:
+      - .env
+    ports:
+      - ${API_GATEWAY_PORT}:${API_GATEWAY_PORT}
+    networks:
+      - backend
+    volumes:
+      - ./gateway:/var/www/gateway
+  token:
+    build: ./token-service
+    restart: unless-stopped
+    container_name: ${TOKEN_SERVICE_HOST}
+    hostname: ${TOKEN_SERVICE_HOST}
+    env_file:
+      - .env
+    networks:
+      - backend
+    volumes:
+      - ./token-service:/var/www/token
+    ports:
+      - ${TOKEN_SERVICE_PORT}:${TOKEN_SERVICE_PORT}
+  user:
+    build: ./user-service
+    container_name: ${USER_SERVICE_HOST}
+    hostname: ${USER_SERVICE_HOST}
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - backend
+    links:
+      - users_db
+    command: bash -c 'while !</dev/tcp/users_db/3306; do sleep 2; done; npm run start:dev'
+    volumes:
+      - ./user-service:/var/www/user
+    ports:
+      - ${USER_SERVICE_PORT}:${USER_SERVICE_PORT}
+  users_db:
+    image: mysql:5.7
+    restart: unless-stopped
+    container_name: ${USER_SERVICE_APP_MYSQL_HOST}
+    environment:
+      MYSQL_HOST: $USER_SERVICE_MYSQL_HOST
+      MYSQL_ROOT_PASSWORD: $USER_SERVICE_MYSQL_PASSWORD
+      MYSQL_DATABASE: $USER_SERVICE_MYSQL_DATABASE
+      MYSQL_USER: $USER_SERVICE_MYSQL_USER
+      MYSQL_PASSWORD: $USER_SERVICE_MYSQL_PASSWORD
+    ports:
+      - 3306:${USER_SERVICE_MYSQL_PORT}
+    networks:
+      - backend
+    volumes:
+      - ./docker/users/db-data:/var/lib/mysql
+  event:
+    build: ./event-service
+    container_name: ${EVENT_SERVICE_HOST}
+    hostname: ${EVENT_SERVICE_HOST}
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - backend
+    links:
+      - users_db
+    command: bash -c 'while !</dev/tcp/events_db/3306; do sleep 2; done; npm run start:dev'
+    volumes:
+      - ./event-service:/var/www/event
+    ports:
+      - ${EVENT_SERVICE_PORT}:${EVENT_SERVICE_PORT}
+  events_db:
+    image: mysql:5.7
+    container_name: ${EVENT_SERVICE_APP_MYSQL_HOST}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_HOST: $EVENT_SERVICE_MYSQL_HOST
+      MYSQL_ROOT_PASSWORD: $EVENT_SERVICE_MYSQL_PASSWORD
+      MYSQL_DATABASE: $EVENT_SERVICE_MYSQL_DATABASE
+      MYSQL_USER: $EVENT_SERVICE_MYSQL_USER
+      MYSQL_PASSWORD: $EVENT_SERVICE_MYSQL_PASSWORD
+    ports:
+      - 3307:${EVENT_SERVICE_MYSQL_PORT}
+    networks:
+      - backend
+    volumes:
+      - ./docker/events/db-data:/var/lib/mysql
+networks:
+  backend:
+    driver: bridge
